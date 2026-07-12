@@ -73,6 +73,21 @@ Schema::create('comments', function (Blueprint $table) {
 });
 ```
 
+For polymorphic relations use `cuid2Morphs()` (and `nullableCuid2Morphs()`),
+the CUID2 counterparts of Laravel's `ulidMorphs()`. They add a `{name}_type`
+string column, a `{name}_id` char column and a composite index:
+
+```php
+Schema::create('tokens', function (Blueprint $table) {
+    $table->cuid2()->primary();
+    $table->cuid2Morphs('tokenable');          // tokenable_type + tokenable_id
+    $table->string('token');
+});
+
+// nullable variant
+$table->nullableCuid2Morphs('tokenable');
+```
+
 ### Helper
 
 ```php

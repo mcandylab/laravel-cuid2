@@ -45,4 +45,46 @@ class BlueprintMacroTest extends TestCase
         $this->assertSame('char', $column->get('type'));
         $this->assertSame(24, $column->get('length'));
     }
+
+    public function test_cuid2_morphs_macro_creates_type_and_char_id_columns(): void
+    {
+        config()->set('laravel-cuid2.length', 24);
+
+        $blueprint = $this->blueprint('taggables');
+        $blueprint->cuid2Morphs('taggable');
+
+        $columns = collect($blueprint->getColumns());
+
+        $type = $columns->firstWhere('name', 'taggable_type');
+        $this->assertNotNull($type);
+        $this->assertSame('string', $type->get('type'));
+
+        $id = $columns->firstWhere('name', 'taggable_id');
+        $this->assertNotNull($id);
+        $this->assertSame('char', $id->get('type'));
+        $this->assertSame(24, $id->get('length'));
+        $this->assertNull($id->get('nullable'));
+
+        $index = collect($blueprint->getCommands())->firstWhere('name', 'index');
+        $this->assertNotNull($index);
+        $this->assertSame(['taggable_type', 'taggable_id'], $index->get('columns'));
+    }
+
+    public function test_nullable_cuid2_morphs_macro_creates_nullable_columns(): void
+    {
+        config()->set('laravel-cuid2.length', 24);
+
+        $blueprint = $this->blueprint('taggables');
+        $blueprint->nullableCuid2Morphs('taggable');
+
+        $columns = collect($blueprint->getColumns());
+
+        $type = $columns->firstWhere('name', 'taggable_type');
+        $this->assertTrue($type->get('nullable'));
+
+        $id = $columns->firstWhere('name', 'taggable_id');
+        $this->assertSame('char', $id->get('type'));
+        $this->assertSame(24, $id->get('length'));
+        $this->assertTrue($id->get('nullable'));
+    }
 }

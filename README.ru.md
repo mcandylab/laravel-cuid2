@@ -73,6 +73,21 @@ Schema::create('comments', function (Blueprint $table) {
 });
 ```
 
+Для полиморфных связей используйте `cuid2Morphs()` (и `nullableCuid2Morphs()`) —
+это CUID2-аналоги ларавеловского `ulidMorphs()`. Они добавляют string-колонку
+`{name}_type`, char-колонку `{name}_id` и составной индекс:
+
+```php
+Schema::create('tokens', function (Blueprint $table) {
+    $table->cuid2()->primary();
+    $table->cuid2Morphs('tokenable');          // tokenable_type + tokenable_id
+    $table->string('token');
+});
+
+// nullable-вариант
+$table->nullableCuid2Morphs('tokenable');
+```
+
 ### Хелпер
 
 ```php

@@ -60,6 +60,8 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
      * Usage:
      *   $table->cuid2()->primary();
      *   $table->foreignCuid2('user_id')->constrained();
+     *   $table->cuid2Morphs('tokenable');
+     *   $table->nullableCuid2Morphs('tokenable');
      */
     protected function registerBlueprintMacros(): void
     {
@@ -78,6 +80,34 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
                     'name' => $column,
                     'length' => (int) config('laravel-cuid2.length', 24),
                 ]));
+            });
+        }
+
+        if (! Blueprint::hasMacro('cuid2Morphs')) {
+            Blueprint::macro('cuid2Morphs', function (string $name, ?string $indexName = null, ?string $after = null) {
+                /** @var Blueprint $this */
+                $this->string("{$name}_type")
+                    ->after($after);
+
+                $this->cuid2("{$name}_id")
+                    ->after(! is_null($after) ? "{$name}_type" : null);
+
+                $this->index(["{$name}_type", "{$name}_id"], $indexName);
+            });
+        }
+
+        if (! Blueprint::hasMacro('nullableCuid2Morphs')) {
+            Blueprint::macro('nullableCuid2Morphs', function (string $name, ?string $indexName = null, ?string $after = null) {
+                /** @var Blueprint $this */
+                $this->string("{$name}_type")
+                    ->nullable()
+                    ->after($after);
+
+                $this->cuid2("{$name}_id")
+                    ->nullable()
+                    ->after(! is_null($after) ? "{$name}_type" : null);
+
+                $this->index(["{$name}_type", "{$name}_id"], $indexName);
             });
         }
     }
