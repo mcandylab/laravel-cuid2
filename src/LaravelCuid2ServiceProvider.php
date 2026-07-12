@@ -2,6 +2,8 @@
 
 namespace Mcandylab\LaravelCuid2;
 
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\ForeignIdColumnDefinition;
 use Illuminate\Support\ServiceProvider;
 
 class LaravelCuid2ServiceProvider extends ServiceProvider
@@ -11,13 +13,7 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        /*
-         * Optional methods to load your package assets
-         */
-        // $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'laravel-cuid2');
-        // $this->loadViewsFrom(__DIR__.'/../resources/views', 'laravel-cuid2');
-        // $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
-        // $this->loadRoutesFrom(__DIR__.'/routes.php');
+        $this->registerBlueprintMacros();
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
@@ -56,5 +52,33 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
         $this->app->singleton('laravel-cuid2', function () {
             return new LaravelCuid2;
         });
+    }
+
+    /**
+     * Register schema macros for declaring cuid2 columns in migrations.
+     *
+     * Usage:
+     *   $table->cuid2()->primary();
+     *   $table->foreignCuid2('user_id')->constrained();
+     */
+    protected function registerBlueprintMacros(): void
+    {
+        if (! Blueprint::hasMacro('cuid2')) {
+            Blueprint::macro('cuid2', function (string $column = 'id') {
+                /** @var Blueprint $this */
+                return $this->char($column, (int) config('laravel-cuid2.length', 24));
+            });
+        }
+
+        if (! Blueprint::hasMacro('foreignCuid2')) {
+            Blueprint::macro('foreignCuid2', function (string $column) {
+                /** @var Blueprint $this */
+                return $this->addColumnDefinition(new ForeignIdColumnDefinition($this, [
+                    'type' => 'char',
+                    'name' => $column,
+                    'length' => (int) config('laravel-cuid2.length', 24),
+                ]));
+            });
+        }
     }
 }
