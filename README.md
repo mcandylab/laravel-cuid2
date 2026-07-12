@@ -104,6 +104,22 @@ Cuid2::generate();          // generate an id
 Cuid2::isValid($someId);    // validate a string
 ```
 
+### Validation
+
+The `cuid2` rule validates that a value is a well-formed CUID2. It is available in three forms:
+
+```php
+use Illuminate\Validation\Rule;
+use Mcandylab\LaravelCuid2\Rules\Cuid2;
+
+$request->validate([
+    'id'    => 'cuid2',                  // any valid CUID2
+    'token' => 'cuid2:10',              // exact length (4..32)
+    'ref'   => [new Cuid2(10)],         // rule object
+    'ext'   => [Rule::cuid2(length: 10)], // rule macro
+]);
+```
+
 ## Configuration
 
 `config/laravel-cuid2.php`:

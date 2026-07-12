@@ -5,6 +5,14 @@ All notable changes to `laravel-cuid2` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.2.0 - 2026-07-12
+
+### Added
+
+- `cuid2` validation rule to check that a value is a well-formed CUID2, available
+  as a string rule (`'cuid2'` / `'cuid2:10'` for an exact length), a rule object
+  (`Mcandylab\LaravelCuid2\Rules\Cuid2`) and a `Rule::cuid2()` macro.
+
 ## 1.1.0 - 2026-07-12
 
 ### Added

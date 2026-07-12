@@ -104,6 +104,22 @@ Cuid2::generate();          // сгенерировать id
 Cuid2::isValid($someId);    // проверить строку
 ```
 
+### Валидация
+
+Правило `cuid2` проверяет, что значение — корректный CUID2. Доступно в трёх формах:
+
+```php
+use Illuminate\Validation\Rule;
+use Mcandylab\LaravelCuid2\Rules\Cuid2;
+
+$request->validate([
+    'id'    => 'cuid2',                  // любой валидный CUID2
+    'token' => 'cuid2:10',              // точная длина (4..32)
+    'ref'   => [new Cuid2(10)],         // Rule-объект
+    'ext'   => [Rule::cuid2(length: 10)], // Rule-макрос
+]);
+```
+
 ## Конфигурация
 
 `config/laravel-cuid2.php`:

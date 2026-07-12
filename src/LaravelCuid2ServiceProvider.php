@@ -4,7 +4,11 @@ namespace Mcandylab\LaravelCuid2;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ForeignIdColumnDefinition;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Validation\Rule;
+use Mcandylab\LaravelCuid2\Rules\Cuid2 as Cuid2Rule;
+use Visus\Cuid2\Cuid2 as Cuid2Generator;
 
 class LaravelCuid2ServiceProvider extends ServiceProvider
 {
@@ -14,6 +18,7 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
     public function boot()
     {
         $this->registerBlueprintMacros();
+        $this->registerValidationRules();
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
@@ -109,6 +114,28 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
 
                 $this->index(["{$name}_type", "{$name}_id"], $indexName);
             });
+        }
+    }
+
+    /**
+     * Register the `cuid2` validation rule (string, Rule object and Rule macro forms).
+     *
+     * Usage:
+     *   'id' => 'cuid2'                 // any valid CUID2
+     *   'id' => 'cuid2:10'              // exact length
+     *   'id' => [new Cuid2(10)]         // Rule object
+     *   'id' => [Rule::cuid2(length: 10)]
+     */
+    protected function registerValidationRules(): void
+    {
+        Validator::extend('cuid2', function ($attribute, $value, $parameters) {
+            $length = isset($parameters[0]) ? (int) $parameters[0] : null;
+
+            return is_string($value) && Cuid2Generator::isValid($value, $length);
+        }, 'The :attribute must be a valid CUID2.');
+
+        if (! Rule::hasMacro('cuid2')) {
+            Rule::macro('cuid2', fn (?int $length = null) => new Cuid2Rule($length));
         }
     }
 }
