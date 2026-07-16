@@ -5,6 +5,14 @@ All notable changes to `laravel-cuid2` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.3.0 - 2026-07-16
+
+### Added
+
+- `Str::cuid2()` and `Str::isCuid2()` macros, aligning with the core `Str::uuid()` /
+  `Str::ulid()` helpers for generating and validating identifiers.
+- `fake()->cuid2()` Faker formatter for use in factories and seeders.
+
 ## 1.2.0 - 2026-07-12
 
 ### Added

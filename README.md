@@ -104,6 +104,32 @@ Cuid2::generate();          // generate an id
 Cuid2::isValid($someId);    // validate a string
 ```
 
+### Str macros
+
+Aligned with the core `Str::uuid()` / `Str::ulid()` helpers:
+
+```php
+use Illuminate\Support\Str;
+
+Str::cuid2();              // generate (respects config('laravel-cuid2.length'))
+Str::cuid2(10);           // generate with an explicit length (4..32)
+Str::isCuid2($value);     // validate a value (false for non-strings)
+Str::isCuid2($value, 10); // validate against an exact length
+```
+
+### Faker
+
+A `cuid2()` Faker formatter is available for factories and seeders:
+
+```php
+use App\Models\Post;
+
+Post::factory()->create(['id' => fake()->cuid2()]);
+
+fake()->cuid2();   // generate (respects config('laravel-cuid2.length'))
+fake()->cuid2(10); // generate with an explicit length (4..32)
+```
+
 ### Validation
 
 The `cuid2` rule validates that a value is a well-formed CUID2. It is available in three forms:

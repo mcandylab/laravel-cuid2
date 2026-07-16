@@ -104,6 +104,32 @@ Cuid2::generate();          // сгенерировать id
 Cuid2::isValid($someId);    // проверить строку
 ```
 
+### Str-макросы
+
+Выравнены с ядровыми хелперами `Str::uuid()` / `Str::ulid()`:
+
+```php
+use Illuminate\Support\Str;
+
+Str::cuid2();              // генерация (учитывает config('laravel-cuid2.length'))
+Str::cuid2(10);           // генерация с явной длиной (4..32)
+Str::isCuid2($value);     // проверка значения (false для не-строк)
+Str::isCuid2($value, 10); // проверка на точную длину
+```
+
+### Faker
+
+Для фабрик и сидеров доступен Faker-форматтер `cuid2()`:
+
+```php
+use App\Models\Post;
+
+Post::factory()->create(['id' => fake()->cuid2()]);
+
+fake()->cuid2();   // генерация (учитывает config('laravel-cuid2.length'))
+fake()->cuid2(10); // генерация с явной длиной (4..32)
+```
+
 ### Валидация
 
 Правило `cuid2` проверяет, что значение — корректный CUID2. Доступно в трёх формах:

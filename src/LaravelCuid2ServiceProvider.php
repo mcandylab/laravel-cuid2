@@ -6,7 +6,9 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Schema\ForeignIdColumnDefinition;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Mcandylab\LaravelCuid2\Faker\Cuid2Provider as Cuid2FakerProvider;
 use Mcandylab\LaravelCuid2\Rules\Cuid2 as Cuid2Rule;
 use Visus\Cuid2\Cuid2 as Cuid2Generator;
 
@@ -19,6 +21,7 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
     {
         $this->registerBlueprintMacros();
         $this->registerValidationRules();
+        $this->registerStrMacros();
 
         if ($this->app->runningInConsole()) {
             $this->publishes([
@@ -56,6 +59,22 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
         // Register the main class to use with the facade
         $this->app->singleton('laravel-cuid2', function () {
             return new LaravelCuid2;
+        });
+
+        $this->registerFakerProvider();
+    }
+
+    /**
+     * Register the Faker provider so `fake()->cuid2()` is available in
+     * factories and seeders.
+     *
+     * The provider is only instantiated once a Faker\Generator is resolved,
+     * so this adds no hard runtime dependency on fakerphp/faker.
+     */
+    protected function registerFakerProvider(): void
+    {
+        $this->app->afterResolving(\Faker\Generator::class, function (\Faker\Generator $faker): void {
+            $faker->addProvider(new Cuid2FakerProvider($faker));
         });
     }
 
@@ -136,6 +155,26 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
 
         if (! Rule::hasMacro('cuid2')) {
             Rule::macro('cuid2', fn (?int $length = null) => new Cuid2Rule($length));
+        }
+    }
+
+    /**
+     * Register Str macros, aligning with the core Str::uuid() / Str::ulid() helpers.
+     *
+     * Usage:
+     *   Str::cuid2();            // generate (respects the configured length)
+     *   Str::cuid2(10);         // generate with an explicit length
+     *   Str::isCuid2($value);   // validate
+     *   Str::isCuid2($value, 10); // validate against an exact length
+     */
+    protected function registerStrMacros(): void
+    {
+        if (! Str::hasMacro('cuid2')) {
+            Str::macro('cuid2', fn (?int $length = null): string => cuid2($length));
+        }
+
+        if (! Str::hasMacro('isCuid2')) {
+            Str::macro('isCuid2', fn (mixed $value, ?int $length = null): bool => is_string($value) && Cuid2Generator::isValid($value, $length));
         }
     }
 }
