@@ -26,12 +26,11 @@ class ValidationTest extends TestCase
         $this->assertFalse($this->passes(12345, 'cuid2'));
     }
 
-    // --- String rule with length: 'cuid2:10' ---
-
-    public function test_string_rule_enforces_exact_length(): void
+    public function test_string_rule_accepts_any_valid_length(): void
     {
-        $this->assertTrue($this->passes(cuid2(10), 'cuid2:10'));
-        $this->assertFalse($this->passes(cuid2(24), 'cuid2:10'));
+        $this->assertTrue($this->passes(cuid2(10), 'cuid2'));
+        $this->assertTrue($this->passes(cuid2(24), 'cuid2'));
+        $this->assertTrue($this->passes(cuid2(32), 'cuid2'));
     }
 
     // --- Rule object: new Cuid2 ---
@@ -42,12 +41,6 @@ class ValidationTest extends TestCase
         $this->assertFalse($this->passes('1nvalid', [new Cuid2]));
     }
 
-    public function test_rule_object_enforces_length(): void
-    {
-        $this->assertTrue($this->passes(cuid2(10), [new Cuid2(10)]));
-        $this->assertFalse($this->passes(cuid2(24), [new Cuid2(10)]));
-    }
-
     // --- Rule macro: Rule::cuid2() ---
 
     public function test_rule_macro_passes_and_fails(): void
@@ -56,10 +49,28 @@ class ValidationTest extends TestCase
         $this->assertFalse($this->passes('1nvalid', [Rule::cuid2()]));
     }
 
-    public function test_rule_macro_enforces_length(): void
+    // --- Prefix: Rule object and macro ---
+
+    public function test_rule_object_validates_prefix(): void
     {
-        $this->assertTrue($this->passes(cuid2(10), [Rule::cuid2(length: 10)]));
-        $this->assertFalse($this->passes(cuid2(24), [Rule::cuid2(length: 10)]));
+        $this->assertTrue($this->passes(cuid2(prefix: 'user'), [new Cuid2('user')]));
+        $this->assertFalse($this->passes(cuid2(prefix: 'admin'), [new Cuid2('user')]));
+        $this->assertFalse($this->passes(cuid2(), [new Cuid2('user')]));
+    }
+
+    public function test_rule_macro_validates_prefix(): void
+    {
+        $this->assertTrue($this->passes(cuid2(prefix: 'user'), [Rule::cuid2(prefix: 'user')]));
+        $this->assertFalse($this->passes(cuid2(prefix: 'admin'), [Rule::cuid2(prefix: 'user')]));
+    }
+
+    // --- Prefix: string rule 'cuid2:prefix' ---
+
+    public function test_string_rule_validates_prefix(): void
+    {
+        $this->assertTrue($this->passes(cuid2(prefix: 'user'), 'cuid2:user'));
+        $this->assertFalse($this->passes(cuid2(prefix: 'admin'), 'cuid2:user'));
+        $this->assertFalse($this->passes(cuid2(), 'cuid2:user'));
     }
 
     // --- Error message ---

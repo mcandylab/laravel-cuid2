@@ -74,8 +74,8 @@ Schema::create('comments', function (Blueprint $table) {
 ```
 
 Для полиморфных связей используйте `cuid2Morphs()` (и `nullableCuid2Morphs()`) —
-это CUID2-аналоги ларавеловского `ulidMorphs()`. Они добавляют string-колонку
-`{name}_type`, char-колонку `{name}_id` и составной индекс:
+это CUID2-аналоги `ulidMorphs()`. Они добавляют string-колонку
+`{name}_type`, varchar-колонку `{name}_id` и составной индекс:
 
 ```php
 Schema::create('tokens', function (Blueprint $table) {
@@ -92,7 +92,7 @@ $table->nullableCuid2Morphs('tokenable');
 
 ```php
 $id = cuid2();      // 24 символа (или значение config('laravel-cuid2.length'))
-$short = cuid2(10); // произвольная длина 4..32
+$short = cuid2(10); // ровно 10 символов (допустимо от 4 до 32)
 ```
 
 ### Фасад
@@ -111,10 +111,9 @@ Cuid2::isValid($someId);    // проверить строку
 ```php
 use Illuminate\Support\Str;
 
-Str::cuid2();              // генерация (учитывает config('laravel-cuid2.length'))
-Str::cuid2(10);           // генерация с явной длиной (4..32)
-Str::isCuid2($value);     // проверка значения (false для не-строк)
-Str::isCuid2($value, 10); // проверка на точную длину
+Str::cuid2();          // генерация (учитывает config('laravel-cuid2.length'))
+Str::cuid2(10);        // ровно 10 символов (допустимо от 4 до 32)
+Str::isCuid2($value);  // проверка значения (false для не-строк)
 ```
 
 ### Faker
@@ -127,24 +126,81 @@ use App\Models\Post;
 Post::factory()->create(['id' => fake()->cuid2()]);
 
 fake()->cuid2();   // генерация (учитывает config('laravel-cuid2.length'))
-fake()->cuid2(10); // генерация с явной длиной (4..32)
+fake()->cuid2(10); // ровно 10 символов (допустимо от 4 до 32)
 ```
 
 ### Валидация
 
-Правило `cuid2` проверяет, что значение — корректный CUID2. Доступно в трёх формах:
+Правило `cuid2` проверяет, что значение — корректный CUID2 любой допустимой длины
+(4..32). Доступно в трёх формах:
 
 ```php
 use Illuminate\Validation\Rule;
 use Mcandylab\LaravelCuid2\Rules\Cuid2;
 
 $request->validate([
-    'id'    => 'cuid2',                  // любой валидный CUID2
-    'token' => 'cuid2:10',              // точная длина (4..32)
-    'ref'   => [new Cuid2(10)],         // Rule-объект
-    'ext'   => [Rule::cuid2(length: 10)], // Rule-макрос
+    'id'    => 'cuid2',          // строковое правило
+    'ref'   => [new Cuid2],      // Rule-объект
+    'ext'   => [Rule::cuid2()],  // Rule-макрос
 ]);
 ```
+
+### Идентификаторы с префиксом (в стиле Stripe)
+
+Можно получать читаемые идентификаторы вида `user_p6p168tx…`, объявив на модели
+свойство `$cuid2Prefix`. Префикс — это лишь «конверт»: часть cuid2 после `_`
+остаётся полностью соответствующей спецификации:
+
+```php
+class User extends Model
+{
+    use HasCuid2;
+
+    protected string $cuid2Prefix = 'user';
+}
+```
+
+Размер колонки задавайте макросом `cuid2WithPrefix()` (и `foreignCuid2WithPrefix()`
+для внешних ключей). Они создают колонку `varchar` (по `Schema::defaultStringLength`
+Laravel, по умолчанию 255) — она вмещает любое значение `{префикс}_{cuid2}` и
+полностью индексируется:
+
+```php
+Schema::create('users', function (Blueprint $table) {
+    $table->cuid2WithPrefix('id')->primary();
+    $table->string('name');
+});
+
+// внешний ключ на модель с префиксом
+$table->foreignCuid2WithPrefix('user_id');
+```
+
+Генераторы тоже принимают опциональный префикс:
+
+```php
+cuid2(prefix: 'user');            // user_…
+Str::cuid2(prefix: 'user');       // user_…
+fake()->cuid2(prefix: 'user');    // user_…
+```
+
+Валидация может опционально проверять префикс — сверяет `{префикс}_` и то, что
+остаток является корректным CUID2. Без префикса правило работает как прежде:
+
+```php
+$request->validate([
+    'id'  => 'cuid2:user',                 // строковое правило
+    'id2' => [new Cuid2('user')],          // Rule-объект
+    'id3' => [Rule::cuid2(prefix: 'user')], // Rule-макрос
+]);
+
+Str::isCuid2($value, 'user');              // и через Str-макрос
+```
+
+> **Примечание:** `cuid2Morphs()` / `nullableCuid2Morphs()` создают колонку
+> `{name}_id` типа `varchar`, поэтому префиксную модель можно безопасно
+> использовать как полиморфную цель без усечения. Аргумента префикса у макросов
+> нет — полиморфная колонка может указывать на модели с разными префиксами, а сам
+> префикс уже определяется колонкой `{name}_type`.
 
 ## Конфигурация
 

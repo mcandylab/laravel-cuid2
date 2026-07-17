@@ -31,10 +31,15 @@ trait HasCuid2
 
     /**
      * Generate a new identifier value.
+     *
+     * When the model declares a `$cuid2Prefix` property, a Stripe-style
+     * `{prefix}_{cuid2}` identifier is produced. The property is intentionally
+     * not declared on the trait so a model may type it however it likes without
+     * a trait/class property conflict.
      */
     public function newUniqueId(): string
     {
-        return cuid2();
+        return cuid2(prefix: $this->cuid2Prefix ?? null);
     }
 
     /**

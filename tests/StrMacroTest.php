@@ -56,9 +56,26 @@ class StrMacroTest extends TestCase
         $this->assertFalse(Str::isCuid2(null));
     }
 
-    public function test_it_enforces_exact_length(): void
+    public function test_it_accepts_any_valid_length(): void
     {
-        $this->assertTrue(Str::isCuid2(cuid2(10), 10));
-        $this->assertFalse(Str::isCuid2(cuid2(24), 10));
+        $this->assertTrue(Str::isCuid2(cuid2(10)));
+        $this->assertTrue(Str::isCuid2(cuid2(32)));
+    }
+
+    // --- Prefix support ---
+
+    public function test_it_generates_a_prefixed_id(): void
+    {
+        $id = Str::cuid2(prefix: 'user');
+
+        $this->assertStringStartsWith('user_', $id);
+        $this->assertTrue(Cuid2::isValid(substr($id, 5)));
+    }
+
+    public function test_it_validates_a_prefixed_id(): void
+    {
+        $this->assertTrue(Str::isCuid2(Str::cuid2(prefix: 'user'), 'user'));
+        $this->assertFalse(Str::isCuid2(Str::cuid2(prefix: 'admin'), 'user'));
+        $this->assertFalse(Str::isCuid2(cuid2(), 'user'));
     }
 }

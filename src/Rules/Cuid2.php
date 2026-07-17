@@ -9,9 +9,9 @@ use Visus\Cuid2\Cuid2 as Cuid2Generator;
 class Cuid2 implements ValidationRule
 {
     /**
-     * @param  int|null  $length  Expected exact length (4..32). null accepts any valid length.
+     * @param  string|null  $prefix  When set, the value must be a Stripe-style `{prefix}_{cuid2}` identifier.
      */
-    public function __construct(public ?int $length = null)
+    public function __construct(public ?string $prefix = null)
     {
     }
 
@@ -20,8 +20,33 @@ class Cuid2 implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! is_string($value) || ! Cuid2Generator::isValid($value, $this->length)) {
+        if (! static::isValid($value, $this->prefix)) {
             $fail('The :attribute must be a valid CUID2.');
         }
+    }
+
+    /**
+     * Validate a value as a (optionally prefixed) CUID2.
+     *
+     * With a prefix, the value must start with `{prefix}_` and the remainder
+     * must itself be a valid CUID2.
+     */
+    public static function isValid(mixed $value, ?string $prefix = null): bool
+    {
+        if (! is_string($value)) {
+            return false;
+        }
+
+        if ($prefix !== null && $prefix !== '') {
+            $needle = "{$prefix}_";
+
+            if (! str_starts_with($value, $needle)) {
+                return false;
+            }
+
+            $value = substr($value, strlen($needle));
+        }
+
+        return Cuid2Generator::isValid($value);
     }
 }

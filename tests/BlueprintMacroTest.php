@@ -3,6 +3,7 @@
 namespace Mcandylab\LaravelCuid2\Tests;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Builder;
 use Illuminate\Support\Facades\DB;
 
 class BlueprintMacroTest extends TestCase
@@ -61,13 +62,31 @@ class BlueprintMacroTest extends TestCase
 
         $id = $columns->firstWhere('name', 'taggable_id');
         $this->assertNotNull($id);
-        $this->assertSame('char', $id->get('type'));
-        $this->assertSame(24, $id->get('length'));
+        $this->assertSame('string', $id->get('type'));
+        $this->assertSame(Builder::$defaultStringLength, $id->get('length'));
         $this->assertNull($id->get('nullable'));
 
         $index = collect($blueprint->getCommands())->firstWhere('name', 'index');
         $this->assertNotNull($index);
         $this->assertSame(['taggable_type', 'taggable_id'], $index->get('columns'));
+    }
+
+    public function test_cuid2_with_prefix_macro_creates_a_varchar_column(): void
+    {
+        $column = $this->blueprint('users')->cuid2WithPrefix('id');
+
+        $this->assertSame('id', $column->get('name'));
+        $this->assertSame('string', $column->get('type'));
+        $this->assertSame(Builder::$defaultStringLength, $column->get('length'));
+    }
+
+    public function test_foreign_cuid2_with_prefix_macro_creates_a_varchar_foreign_column(): void
+    {
+        $column = $this->blueprint('posts')->foreignCuid2WithPrefix('user_id');
+
+        $this->assertSame('user_id', $column->get('name'));
+        $this->assertSame('string', $column->get('type'));
+        $this->assertSame(Builder::$defaultStringLength, $column->get('length'));
     }
 
     public function test_nullable_cuid2_morphs_macro_creates_nullable_columns(): void
@@ -83,8 +102,8 @@ class BlueprintMacroTest extends TestCase
         $this->assertTrue($type->get('nullable'));
 
         $id = $columns->firstWhere('name', 'taggable_id');
-        $this->assertSame('char', $id->get('type'));
-        $this->assertSame(24, $id->get('length'));
+        $this->assertSame('string', $id->get('type'));
+        $this->assertSame(Builder::$defaultStringLength, $id->get('length'));
         $this->assertTrue($id->get('nullable'));
     }
 }

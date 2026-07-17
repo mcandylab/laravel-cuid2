@@ -3,6 +3,7 @@
 namespace Mcandylab\LaravelCuid2;
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Schema\Builder;
 use Illuminate\Database\Schema\ForeignIdColumnDefinition;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
@@ -10,7 +11,6 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Mcandylab\LaravelCuid2\Faker\Cuid2Provider as Cuid2FakerProvider;
 use Mcandylab\LaravelCuid2\Rules\Cuid2 as Cuid2Rule;
-use Visus\Cuid2\Cuid2 as Cuid2Generator;
 
 class LaravelCuid2ServiceProvider extends ServiceProvider
 {
@@ -82,9 +82,11 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
      * Register schema macros for declaring cuid2 columns in migrations.
      *
      * Usage:
-     *   $table->cuid2()->primary();
+     *   $table->cuid2()->primary();                  // char(config length)
      *   $table->foreignCuid2('user_id')->constrained();
-     *   $table->cuid2Morphs('tokenable');
+     *   $table->cuid2WithPrefix('id')->primary();    // varchar for prefixed keys
+     *   $table->foreignCuid2WithPrefix('user_id');   // varchar
+     *   $table->cuid2Morphs('tokenable');            // {name}_id is varchar
      *   $table->nullableCuid2Morphs('tokenable');
      */
     protected function registerBlueprintMacros(): void
@@ -107,13 +109,37 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
             });
         }
 
+        if (! Blueprint::hasMacro('cuid2WithPrefix')) {
+            Blueprint::macro('cuid2WithPrefix', function (string $column = 'id') {
+                /** @var Blueprint $this */
+                // varchar (Schema::defaultStringLength): fits any Stripe-style
+                // {prefix}_{cuid2} value and is fully indexable across databases.
+                // The prefix itself lives on the model ($cuid2Prefix), so it is
+                // not a column concern.
+                return $this->string($column);
+            });
+        }
+
+        if (! Blueprint::hasMacro('foreignCuid2WithPrefix')) {
+            Blueprint::macro('foreignCuid2WithPrefix', function (string $column) {
+                /** @var Blueprint $this */
+                return $this->addColumnDefinition(new ForeignIdColumnDefinition($this, [
+                    'type' => 'string',
+                    'name' => $column,
+                    'length' => Builder::$defaultStringLength,
+                ]));
+            });
+        }
+
         if (! Blueprint::hasMacro('cuid2Morphs')) {
             Blueprint::macro('cuid2Morphs', function (string $name, ?string $indexName = null, ?string $after = null) {
                 /** @var Blueprint $this */
                 $this->string("{$name}_type")
                     ->after($after);
 
-                $this->cuid2("{$name}_id")
+                // varchar so a prefixed morph target (post_…) is not truncated;
+                // the prefix stays implicit via the {name}_type column.
+                $this->string("{$name}_id")
                     ->after(! is_null($after) ? "{$name}_type" : null);
 
                 $this->index(["{$name}_type", "{$name}_id"], $indexName);
@@ -127,7 +153,7 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
                     ->nullable()
                     ->after($after);
 
-                $this->cuid2("{$name}_id")
+                $this->string("{$name}_id")
                     ->nullable()
                     ->after(! is_null($after) ? "{$name}_type" : null);
 
@@ -141,20 +167,21 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
      *
      * Usage:
      *   'id' => 'cuid2'                 // any valid CUID2
-     *   'id' => 'cuid2:10'              // exact length
-     *   'id' => [new Cuid2(10)]         // Rule object
-     *   'id' => [Rule::cuid2(length: 10)]
+     *   'id' => 'cuid2:user'            // a `user_`-prefixed CUID2
+     *   'id' => [new Cuid2]             // Rule object
+     *   'id' => [new Cuid2('user')]
+     *   'id' => [Rule::cuid2(prefix: 'user')]
      */
     protected function registerValidationRules(): void
     {
         Validator::extend('cuid2', function ($attribute, $value, $parameters) {
-            $length = isset($parameters[0]) ? (int) $parameters[0] : null;
+            $prefix = isset($parameters[0]) && $parameters[0] !== '' ? (string) $parameters[0] : null;
 
-            return is_string($value) && Cuid2Generator::isValid($value, $length);
+            return Cuid2Rule::isValid($value, $prefix);
         }, 'The :attribute must be a valid CUID2.');
 
         if (! Rule::hasMacro('cuid2')) {
-            Rule::macro('cuid2', fn (?int $length = null) => new Cuid2Rule($length));
+            Rule::macro('cuid2', fn (?string $prefix = null) => new Cuid2Rule($prefix));
         }
     }
 
@@ -164,17 +191,18 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
      * Usage:
      *   Str::cuid2();            // generate (respects the configured length)
      *   Str::cuid2(10);         // generate with an explicit length
+     *   Str::cuid2(prefix: 'user'); // Stripe-style prefixed id
      *   Str::isCuid2($value);   // validate
-     *   Str::isCuid2($value, 10); // validate against an exact length
+     *   Str::isCuid2($value, 'user'); // validate a prefixed id
      */
     protected function registerStrMacros(): void
     {
         if (! Str::hasMacro('cuid2')) {
-            Str::macro('cuid2', fn (?int $length = null): string => cuid2($length));
+            Str::macro('cuid2', fn (?int $length = null, ?string $prefix = null): string => cuid2($length, $prefix));
         }
 
         if (! Str::hasMacro('isCuid2')) {
-            Str::macro('isCuid2', fn (mixed $value, ?int $length = null): bool => is_string($value) && Cuid2Generator::isValid($value, $length));
+            Str::macro('isCuid2', fn (mixed $value, ?string $prefix = null): bool => Cuid2Rule::isValid($value, $prefix));
         }
     }
 }
