@@ -26,4 +26,12 @@ class FakerProviderTest extends TestCase
     {
         $this->assertNotSame(fake()->cuid2(), fake()->cuid2());
     }
+
+    public function test_it_generates_a_prefixed_id(): void
+    {
+        $id = fake()->cuid2(prefix: 'user');
+
+        $this->assertStringStartsWith('user_', $id);
+        $this->assertTrue(Cuid2::isValid(substr($id, 5)));
+    }
 }

@@ -75,7 +75,7 @@ Schema::create('comments', function (Blueprint $table) {
 
 For polymorphic relations use `cuid2Morphs()` (and `nullableCuid2Morphs()`),
 the CUID2 counterparts of Laravel's `ulidMorphs()`. They add a `{name}_type`
-string column, a `{name}_id` char column and a composite index:
+string column, a `{name}_id` varchar column and a composite index:
 
 ```php
 Schema::create('tokens', function (Blueprint $table) {
@@ -92,7 +92,7 @@ $table->nullableCuid2Morphs('tokenable');
 
 ```php
 $id = cuid2();      // 24 characters (or config('laravel-cuid2.length'))
-$short = cuid2(10); // arbitrary length 4..32
+$short = cuid2(10); // exactly 10 characters (4..32 allowed)
 ```
 
 ### Facade
@@ -111,10 +111,9 @@ Aligned with the core `Str::uuid()` / `Str::ulid()` helpers:
 ```php
 use Illuminate\Support\Str;
 
-Str::cuid2();              // generate (respects config('laravel-cuid2.length'))
-Str::cuid2(10);           // generate with an explicit length (4..32)
-Str::isCuid2($value);     // validate a value (false for non-strings)
-Str::isCuid2($value, 10); // validate against an exact length
+Str::cuid2();          // generate (respects config('laravel-cuid2.length'))
+Str::cuid2(10);        // exactly 10 characters (4..32 allowed)
+Str::isCuid2($value);  // validate a value (false for non-strings)
 ```
 
 ### Faker
@@ -127,24 +126,81 @@ use App\Models\Post;
 Post::factory()->create(['id' => fake()->cuid2()]);
 
 fake()->cuid2();   // generate (respects config('laravel-cuid2.length'))
-fake()->cuid2(10); // generate with an explicit length (4..32)
+fake()->cuid2(10); // exactly 10 characters (4..32 allowed)
 ```
 
 ### Validation
 
-The `cuid2` rule validates that a value is a well-formed CUID2. It is available in three forms:
+The `cuid2` rule validates that a value is a well-formed CUID2 of any valid length
+(4..32). It is available in three forms:
 
 ```php
 use Illuminate\Validation\Rule;
 use Mcandylab\LaravelCuid2\Rules\Cuid2;
 
 $request->validate([
-    'id'    => 'cuid2',                  // any valid CUID2
-    'token' => 'cuid2:10',              // exact length (4..32)
-    'ref'   => [new Cuid2(10)],         // rule object
-    'ext'   => [Rule::cuid2(length: 10)], // rule macro
+    'id'    => 'cuid2',          // string rule
+    'ref'   => [new Cuid2],      // rule object
+    'ext'   => [Rule::cuid2()],  // rule macro
 ]);
 ```
+
+### Prefixed identifiers (Stripe-style)
+
+You can produce human-readable identifiers such as `user_p6p168tx…` by declaring
+a `$cuid2Prefix` property on the model. The prefix is just an envelope — the
+cuid2 part after the `_` stays fully spec-compliant:
+
+```php
+class User extends Model
+{
+    use HasCuid2;
+
+    protected string $cuid2Prefix = 'user';
+}
+```
+
+Size the column with `cuid2WithPrefix()` (and `foreignCuid2WithPrefix()` for
+foreign keys). They create a `varchar` column (using Laravel's
+`Schema::defaultStringLength`, 255 by default), which fits any `{prefix}_{cuid2}`
+value and is fully indexable:
+
+```php
+Schema::create('users', function (Blueprint $table) {
+    $table->cuid2WithPrefix('id')->primary();
+    $table->string('name');
+});
+
+// a foreign key referencing a prefixed model
+$table->foreignCuid2WithPrefix('user_id');
+```
+
+The generators accept an optional prefix too:
+
+```php
+cuid2(prefix: 'user');            // user_…
+Str::cuid2(prefix: 'user');       // user_…
+fake()->cuid2(prefix: 'user');    // user_…
+```
+
+Validation can optionally check the prefix — it verifies the `{prefix}_` and
+that the remainder is a valid CUID2. Without a prefix the rule is unchanged:
+
+```php
+$request->validate([
+    'id'  => 'cuid2:user',                 // string rule
+    'id2' => [new Cuid2('user')],          // rule object
+    'id3' => [Rule::cuid2(prefix: 'user')], // rule macro
+]);
+
+Str::isCuid2($value, 'user');              // and via the Str macro
+```
+
+> **Note:** `cuid2Morphs()` / `nullableCuid2Morphs()` create a `varchar`
+> `{name}_id` column, so a prefixed model can safely be a polymorphic target
+> without truncation. The macros take no prefix argument — a polymorphic column
+> may point at models with different prefixes, and the prefix is already implied
+> by the `{name}_type` column.
 
 ## Configuration
 

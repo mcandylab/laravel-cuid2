@@ -33,4 +33,20 @@ class HelperTest extends TestCase
     {
         $this->assertNotSame(cuid2(), cuid2());
     }
+
+    public function test_it_composes_a_stripe_style_prefix(): void
+    {
+        $id = cuid2(prefix: 'user');
+
+        $this->assertStringStartsWith('user_', $id);
+        $this->assertTrue(Cuid2::isValid(substr($id, strlen('user_'))));
+    }
+
+    public function test_prefix_leaves_the_cuid2_part_at_the_requested_length(): void
+    {
+        $id = cuid2(10, 'user');
+
+        $this->assertSame('user_', substr($id, 0, 5));
+        $this->assertTrue(Cuid2::isValid(substr($id, 5), 10));
+    }
 }

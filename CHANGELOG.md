@@ -5,6 +5,36 @@ All notable changes to `laravel-cuid2` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.4.0 - 2026-07-17
+
+### Added
+
+- Stripe-style prefixed identifiers (`user_p6p168tx…`): declare a `$cuid2Prefix`
+  property on a model to have `HasCuid2` produce `{prefix}_{cuid2}` keys. The
+  cuid2 part stays fully spec-compliant.
+- Optional `prefix` argument on the `cuid2()` helper, `Str::cuid2()` /
+  `Str::isCuid2()` macros and the `fake()->cuid2()` formatter.
+- `cuid2WithPrefix()` and `foreignCuid2WithPrefix()` schema blueprint macros that
+  create a `varchar` column (Laravel's `Schema::defaultStringLength`) able to hold
+  the whole prefixed value.
+- Optional prefix validation via `Rule::cuid2(prefix: …)`, `new Cuid2(…)`,
+  `Str::isCuid2($value, …)` and the string rule `cuid2:<prefix>`.
+
+### Changed
+
+- `cuid2Morphs()` / `nullableCuid2Morphs()` now declare the `{name}_id` column as
+  `varchar` instead of a fixed-length `char`, so a prefixed model can be used as a
+  polymorphic target without truncation.
+
+### Removed
+
+- The length argument of the `cuid2` validation rule (`cuid2:<length>`,
+  `new Cuid2(<length>)`, `Rule::cuid2(length: …)`, `Str::isCuid2($value, <length>)`).
+  The rule never read `config('laravel-cuid2.length')`, so the length had to be
+  restated by hand; it now checks the CUID2 format (any valid length, 4..32) and,
+  optionally, the prefix. Generation is unaffected — `cuid2()`, `Str::cuid2()`,
+  `fake()->cuid2()` and the schema macros still take a length.
+
 ## 1.3.0 - 2026-07-16
 
 ### Added
