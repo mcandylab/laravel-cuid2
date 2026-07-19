@@ -28,7 +28,7 @@ class HasCuid2Test extends TestCase
         });
 
         Schema::create('users', function (Blueprint $table) {
-            $table->cuid2WithPrefix('id')->primary();
+            $table->cuid2('id')->primary();
             $table->string('name');
             $table->timestamps();
         });

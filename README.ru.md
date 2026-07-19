@@ -57,7 +57,10 @@ public function uniqueIds(): array
 
 ### Миграции
 
-Макросы `cuid2()` и `foreignCuid2()` объявляют `char`-колонки нужной длины:
+Макросы `cuid2()` и `foreignCuid2()` объявляют колонки `varchar` (по
+`Schema::defaultStringLength` Laravel, по умолчанию 255). Такие колонки полностью
+индексируются во всех СУБД и вмещают любое генерируемое пакетом значение, включая
+префиксные идентификаторы `{префикс}_{cuid2}`:
 
 ```php
 Schema::create('posts', function (Blueprint $table) {
@@ -160,19 +163,17 @@ class User extends Model
 }
 ```
 
-Размер колонки задавайте макросом `cuid2WithPrefix()` (и `foreignCuid2WithPrefix()`
-для внешних ключей). Они создают колонку `varchar` (по `Schema::defaultStringLength`
-Laravel, по умолчанию 255) — она вмещает любое значение `{префикс}_{cuid2}` и
-полностью индексируется:
+Особый тип колонки не нужен: `cuid2()` и `foreignCuid2()` и так создают `varchar`,
+вмещающий любое значение `{префикс}_{cuid2}`:
 
 ```php
 Schema::create('users', function (Blueprint $table) {
-    $table->cuid2WithPrefix('id')->primary();
+    $table->cuid2()->primary();
     $table->string('name');
 });
 
 // внешний ключ на модель с префиксом
-$table->foreignCuid2WithPrefix('user_id');
+$table->foreignCuid2('user_id');
 ```
 
 Генераторы тоже принимают опциональный префикс:
@@ -196,11 +197,11 @@ $request->validate([
 Str::isCuid2($value, 'user');              // и через Str-макрос
 ```
 
-> **Примечание:** `cuid2Morphs()` / `nullableCuid2Morphs()` создают колонку
-> `{name}_id` типа `varchar`, поэтому префиксную модель можно безопасно
-> использовать как полиморфную цель без усечения. Аргумента префикса у макросов
+> **Примечание:** аргумента префикса у `cuid2Morphs()` / `nullableCuid2Morphs()`
 > нет — полиморфная колонка может указывать на модели с разными префиксами, а сам
-> префикс уже определяется колонкой `{name}_type`.
+> префикс уже определяется колонкой `{name}_type`. Как и все id-колонки пакета,
+> `{name}_id` — это `varchar`, поэтому префиксную модель можно безопасно
+> использовать как полиморфную цель без усечения.
 
 ## Конфигурация
 
@@ -212,6 +213,10 @@ return [
     'length' => (int) env('CUID2_LENGTH', 24),
 ];
 ```
+
+`length` влияет только на генерацию (`cuid2()`, `Str::cuid2()`, `fake()->cuid2()`,
+`HasCuid2`). Схемных макросов это не касается — они всегда объявляют `varchar`,
+поэтому смена длины не требует миграции.
 
 ## Тестирование
 

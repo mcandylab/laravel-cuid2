@@ -81,12 +81,16 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
     /**
      * Register schema macros for declaring cuid2 columns in migrations.
      *
+     * Every cuid2 column is a varchar (Schema::defaultStringLength): it is fully
+     * indexable across databases, does not depend on config('laravel-cuid2.length')
+     * — which only drives generation — and fits any Stripe-style
+     * {prefix}_{cuid2} value. The prefix itself lives on the model
+     * ($cuid2Prefix), so it is not a column concern.
+     *
      * Usage:
-     *   $table->cuid2()->primary();                  // char(config length)
+     *   $table->cuid2()->primary();
      *   $table->foreignCuid2('user_id')->constrained();
-     *   $table->cuid2WithPrefix('id')->primary();    // varchar for prefixed keys
-     *   $table->foreignCuid2WithPrefix('user_id');   // varchar
-     *   $table->cuid2Morphs('tokenable');            // {name}_id is varchar
+     *   $table->cuid2Morphs('tokenable');
      *   $table->nullableCuid2Morphs('tokenable');
      */
     protected function registerBlueprintMacros(): void
@@ -94,34 +98,12 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
         if (! Blueprint::hasMacro('cuid2')) {
             Blueprint::macro('cuid2', function (string $column = 'id') {
                 /** @var Blueprint $this */
-                return $this->char($column, (int) config('laravel-cuid2.length', 24));
+                return $this->string($column);
             });
         }
 
         if (! Blueprint::hasMacro('foreignCuid2')) {
             Blueprint::macro('foreignCuid2', function (string $column) {
-                /** @var Blueprint $this */
-                return $this->addColumnDefinition(new ForeignIdColumnDefinition($this, [
-                    'type' => 'char',
-                    'name' => $column,
-                    'length' => (int) config('laravel-cuid2.length', 24),
-                ]));
-            });
-        }
-
-        if (! Blueprint::hasMacro('cuid2WithPrefix')) {
-            Blueprint::macro('cuid2WithPrefix', function (string $column = 'id') {
-                /** @var Blueprint $this */
-                // varchar (Schema::defaultStringLength): fits any Stripe-style
-                // {prefix}_{cuid2} value and is fully indexable across databases.
-                // The prefix itself lives on the model ($cuid2Prefix), so it is
-                // not a column concern.
-                return $this->string($column);
-            });
-        }
-
-        if (! Blueprint::hasMacro('foreignCuid2WithPrefix')) {
-            Blueprint::macro('foreignCuid2WithPrefix', function (string $column) {
                 /** @var Blueprint $this */
                 return $this->addColumnDefinition(new ForeignIdColumnDefinition($this, [
                     'type' => 'string',
@@ -137,8 +119,6 @@ class LaravelCuid2ServiceProvider extends ServiceProvider
                 $this->string("{$name}_type")
                     ->after($after);
 
-                // varchar so a prefixed morph target (post_…) is not truncated;
-                // the prefix stays implicit via the {name}_type column.
                 $this->string("{$name}_id")
                     ->after(! is_null($after) ? "{$name}_type" : null);
 

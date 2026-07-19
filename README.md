@@ -57,7 +57,10 @@ public function uniqueIds(): array
 
 ### Migrations
 
-The `cuid2()` and `foreignCuid2()` macros declare `char` columns of the configured length:
+The `cuid2()` and `foreignCuid2()` macros declare `varchar` columns (Laravel's
+`Schema::defaultStringLength`, 255 by default). They are fully indexable across
+databases and fit any value the package generates, including prefixed
+`{prefix}_{cuid2}` identifiers:
 
 ```php
 Schema::create('posts', function (Blueprint $table) {
@@ -160,19 +163,17 @@ class User extends Model
 }
 ```
 
-Size the column with `cuid2WithPrefix()` (and `foreignCuid2WithPrefix()` for
-foreign keys). They create a `varchar` column (using Laravel's
-`Schema::defaultStringLength`, 255 by default), which fits any `{prefix}_{cuid2}`
-value and is fully indexable:
+No special column type is needed: `cuid2()` and `foreignCuid2()` already create a
+`varchar` that fits any `{prefix}_{cuid2}` value:
 
 ```php
 Schema::create('users', function (Blueprint $table) {
-    $table->cuid2WithPrefix('id')->primary();
+    $table->cuid2()->primary();
     $table->string('name');
 });
 
 // a foreign key referencing a prefixed model
-$table->foreignCuid2WithPrefix('user_id');
+$table->foreignCuid2('user_id');
 ```
 
 The generators accept an optional prefix too:
@@ -196,11 +197,11 @@ $request->validate([
 Str::isCuid2($value, 'user');              // and via the Str macro
 ```
 
-> **Note:** `cuid2Morphs()` / `nullableCuid2Morphs()` create a `varchar`
-> `{name}_id` column, so a prefixed model can safely be a polymorphic target
-> without truncation. The macros take no prefix argument — a polymorphic column
-> may point at models with different prefixes, and the prefix is already implied
-> by the `{name}_type` column.
+> **Note:** `cuid2Morphs()` / `nullableCuid2Morphs()` take no prefix argument — a
+> polymorphic column may point at models with different prefixes, and the prefix
+> is already implied by the `{name}_type` column. Like every id column in this
+> package, `{name}_id` is a `varchar`, so a prefixed model can safely be a
+> polymorphic target without truncation.
 
 ## Configuration
 
@@ -212,6 +213,10 @@ return [
     'length' => (int) env('CUID2_LENGTH', 24),
 ];
 ```
+
+`length` only affects generation (`cuid2()`, `Str::cuid2()`, `fake()->cuid2()`,
+`HasCuid2`). Schema macros are unaffected — they always declare a `varchar`, so
+changing the length does not require a migration.
 
 ## Testing
 

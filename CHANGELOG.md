@@ -5,6 +5,29 @@ All notable changes to `laravel-cuid2` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 3.0.0 - 2026-07-19
+
+### Changed
+
+- **BREAKING:** `cuid2()` and `foreignCuid2()` now declare a `varchar` column
+  (Laravel's `Schema::defaultStringLength`, 255 by default) instead of a
+  fixed-length `char`. The package no longer creates `char` columns anywhere, so
+  `config('laravel-cuid2.length')` affects generation only and changing it never
+  requires a schema migration. A `varchar` also fits prefixed
+  `{prefix}_{cuid2}` identifiers.
+
+  Existing tables need no immediate action — the stored values are unchanged and
+  old `char` columns keep working. To align an existing schema, change the column
+  type in a migration: `$table->string('id')->change();`.
+
+### Removed
+
+- **BREAKING:** the `cuid2WithPrefix()` and `foreignCuid2WithPrefix()` schema
+  macros. They are now exact duplicates of `cuid2()` / `foreignCuid2()` — replace
+  `$table->cuid2WithPrefix('id')` with `$table->cuid2('id')` and
+  `$table->foreignCuid2WithPrefix('user_id')` with
+  `$table->foreignCuid2('user_id')`.
+
 ## 2.0.0 - 2026-07-17
 
 ### Removed
